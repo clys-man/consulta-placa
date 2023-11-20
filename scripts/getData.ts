@@ -1,22 +1,36 @@
 import axios from "axios";
 import cheerio from "cheerio";
-import fs from "fs";
-import { resolve } from "path";
+import * as fs from "fs";
+import * as path from "path";
+
+interface State {
+  name: string;
+  abbreviation: string;
+}
+
+interface Data {
+  range: string;
+  state: string;
+}
+
+interface StatesWithRange {
+  [key: string]: { ranges: string[] };
+}
 
 const URL =
   "https://pt.wikipedia.org/wiki/Placas_de_identifica%C3%A7%C3%A3o_de_ve%C3%ADculos_no_Brasil";
-const FILE = resolve("./data.json");
+const FILE = path.join(path.resolve(), "./data.json");
 
-const getStates = () => {
-  const data = fs.readFileSync(FILE.toString());
+const getStates = (): State[] => {
+  const data = fs.readFileSync(FILE, "utf-8");
   const { states } = JSON.parse(data);
 
   return states;
 };
 
 const getData = async () => {
-  const rangeByState = [];
-  let statesWithRange = {};
+  const rangeByState: Data[] = [];
+  let statesWithRange: StatesWithRange = {};
   const states = getStates();
 
   const html = await axios.get(URL);
@@ -26,7 +40,7 @@ const getData = async () => {
   tables[2].children.forEach((element) => {
     const rows = $(element);
 
-    rows.each((index, row) => {
+    rows.each((_, row) => {
       const col = $(row).find("td");
 
       const range = $(col[0]).text()
@@ -36,8 +50,8 @@ const getData = async () => {
 
       if (state !== "" && state !== "") {
         states.forEach((element) => {
-          if (element.nome === state) {
-            state = element.sigla;
+          if (element.name === state) {
+            state = element.abbreviation;
           }
         });
 
@@ -51,15 +65,15 @@ const getData = async () => {
     const rows = $(element);
 
     let state = "";
-    rows.each((index, row) => {
+    rows.each((_, row) => {
       const col = $(row).find("td");
       col.each((index, col) => {
         let text = $(col).text().replace("\n", "");
 
         if (index === 0) {
           states.forEach((element) => {
-            if (element.nome === text) {
-              text = element.sigla;
+            if (element.name === text) {
+              text = element.abbreviation;
             }
           });
 
@@ -74,8 +88,7 @@ const getData = async () => {
     });
   });
 
-  // sort statesWithRange by state name
-  const ordered = {};
+  const ordered: StatesWithRange = {};
   Object.keys(statesWithRange).sort().forEach((key) => {
     ordered[key] = statesWithRange[key];
   });
@@ -87,13 +100,13 @@ const getData = async () => {
 
 const main = async () => {
   const { rangeByState, statesWithRange } = await getData();
-  const data = fs.readFileSync(FILE.toString());
+  const data = fs.readFileSync(FILE, "utf-8");
   const json = JSON.parse(data);
 
   json.rangeByState = rangeByState;
   json.statesWithRange = statesWithRange;
 
-  fs.writeFile(FILE.toString(), JSON.stringify(json), (err) => {
+  fs.writeFile(FILE, JSON.stringify(json), (err) => {
     if (err) {
       console.log(err);
     }
