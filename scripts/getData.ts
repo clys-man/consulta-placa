@@ -10,7 +10,7 @@ interface State {
 
 interface Data {
   range: string;
-  state: string;
+  state?: State;
 }
 
 interface StatesWithRange {
@@ -49,13 +49,14 @@ const getData = async () => {
       let state = $(col[1]).text().replace("\n", "");
 
       if (state !== "" && state !== "") {
+        let stateData: State | undefined;
         states.forEach((element) => {
           if (element.name === state) {
-            state = element.abbreviation;
+            stateData = element;
           }
         });
 
-        const data = { range, state };
+        const data = { range, state: stateData };
         rangeByState.push(data);
       }
     });
